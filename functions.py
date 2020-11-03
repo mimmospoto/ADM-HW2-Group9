@@ -27,8 +27,9 @@ def infos(old_df_names, months):
 
         for i in df.columns:
 
-            print('   -' + i + ' has number of Nan : %.d'  %int(df[i].isna().sum()))
+            print('\t- ' + i + ' has number of Nan : %.d'  %int(df[i].isna().sum()))
         print('Total number of rows: %.d' %len(df))
+        print('\n')
 
     return 
 
