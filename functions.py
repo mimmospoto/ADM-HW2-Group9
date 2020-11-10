@@ -62,5 +62,43 @@ def make_new_csv(old_df_names, df_names):
         df.to_csv(df_names[i], index=False)
 
     return
-    
+  
 
+#RQ5
+#Function that create a plot that for each day of the week shows the hourly average of visitors
+def plot_hour_avg(df_names,months):
+    '''
+    create a plot
+    input:
+    -dataframe
+    -months
+    output:
+    -plot
+    '''
+    for i in range(len(df_names)):
+        df=pd.read_csv(df_names[i],parse_dates=['event_time'],date_parser=pd.to_datetime,usecols=['event_time','user_id'],na_filter=False)
+        #hourly averege of visitors for each day
+        domenica=df[df.event_time.dt.dayofweek==0].groupby(df.event_time.dt.hour).user_id.count()
+        lunedi=df[df.event_time.dt.dayofweek==1].groupby(df.event_time.dt.hour).user_id.count()
+        martedi=df[df.event_time.dt.dayofweek==2].groupby(df.event_time.dt.hour).user_id.count()
+        mercoledi=df[df.event_time.dt.dayofweek==3].groupby(df.event_time.dt.hour).user_id.count()
+        giovedi=df[df.event_time.dt.dayofweek==4].groupby(df.event_time.dt.hour).user_id.count()
+        venerdi=df[df.event_time.dt.dayofweek==5].groupby(df.event_time.dt.hour).user_id.count()
+        sabato=df[df.event_time.dt.dayofweek==6].groupby(df.event_time.dt.hour).user_id.count()
+
+        plt.figure()
+        plt.plot(domenica, '-o', color='royalblue', label = 'SUNDAY')
+        plt.plot(lunedi, '-o', color='green', label = 'MONDAY')
+        plt.plot(martedi, '-o', color='red', label = 'TUESDAY')
+        plt.plot(mercoledi, '-o', color='yellow', label = 'WEDNESDAY')
+        plt.plot(giovedi, '-o', color='orange', label = 'THURSDAY')
+        plt.plot(venerdi, '-o', color='violet', label = 'FRIDAY')
+        plt.plot(sabato, '-o', color='grey', label = 'SATURDAY')
+        plt.xlabel('HOUR')
+        plt.ylabel('VISITORS')
+        plt.title("Daily average - %s " %months[i])
+        plt.xticks(range(0,24))
+        plt.legend()
+        plt.show()
+    return
+    
