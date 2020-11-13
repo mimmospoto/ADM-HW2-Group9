@@ -102,3 +102,87 @@ def plot_hour_avg(df_names,months):
         plt.show()
     return
     
+#RQ6
+#Function that calculates the overall conversion rate of the products, creates the plot of the number of purchases by category and shows the conversion rate of each category in descending order 
+def conversion_rate(df_names,months):
+    """
+    calculate overall conversion rate
+    plot of purchase by category
+    calculate conversion rate for each category
+    input:
+    - dataframe
+    - months
+    output:
+    - overall conversion rate for each month
+    - conversion rate for each category of each month
+    - plot of purchase by category of each month
+    """
+    for i in range(len(df_names)):
+        dataset=pd.read_csv(df_names[i],usecols=['event_type','category_code'],na_filter=False)
+        #NUMBER OF ALL PURCHASE PRODUCTS
+        purchase=dataset[dataset.event_type=='purchase']
+        totpurc=len(purchase)
+        #NUMBER OF ALL VIEW PRODUCTS
+        view=dataset[dataset.event_type=='view']
+        totview=len(view)
+        #OVERALL CONVERSION RATE OF STORE
+        cr=totpurc/totview
+        print ('Overall conversion rate of %s'%months[i])
+        print (cr)
+        #CREATE A LIST THAT CONTAINS CATEGORY NAME
+        c=dataset.index
+        categorie=[]
+        for j in c :
+            categorie.append((dataset.category_code[j].split('.')[0]))
+        #CONVERT LIST IN SERIES
+        x=pd.Series(categorie)
+        #DELETE FROM DATASET CATEGORY_CODE
+        del dataset['category_code']
+        #INSERT IN DATASET CATEGORY_NAME
+        dataset.insert(0,'category_name',x)
+        #NUMBER OF PURCHASE FOR CATEGORY
+        purc_4_category=dataset[dataset.event_type=='purchase'].groupby('category_name').agg(purchase=('event_type','count'))
+        #NUMBER OF VIEW FOR CATEGORY
+        view_4_category=dataset[dataset.event_type=='view'].groupby('category_name').agg(view=('event_type','count'))
+        #PLOT OF NUMBER OF PURCHASE FOR CATEGORY
+        purc_4_category.plot.bar(figsize = (18, 7), title='Number of purchase of %s'%months[i])
+        #CONVERSION RATE FOR CATEGORY
+        cr_4_cat=(purc_4_category.purchase/view_4_category.view)
+        dec=cr_4_cat.sort_values(axis=0, ascending=False)
+        print ('Conversion rate of each category of %s'%months[i])
+        print(dec)
+    return
+
+#RQ7
+#Function that demonstrates the Pareto's principle
+def pareto(df_names,months):
+    """
+    Apply Pareto's principle
+    input:
+    - dataframe
+    - months
+    output:
+    - dimostration if Pareto's principle is apply for each month
+    """
+    for i in range(len(df_names)):
+        dataset=pd.read_csv(df_names[i],usecols=['user_id','event_type','price'],na_filter=False)
+        #PURCHASE BY USERS
+        purchase_by_user=dataset[dataset.event_type == 'purchase'].groupby(dataset.user_id).agg(number_of_purchases=('user_id','count'),total_spent=('price','sum'))
+        purchase_by_user=purchase_by_user.sort_values('total_spent',ascending=False)
+        #20% OF USERS
+        user_20=int(len(purchase_by_user)*20/100)
+        purch_by_user20=purchase_by_user[:user_20]
+        #TOTAL SPENT BY 20% OF USERS
+        spent_by_20=purch_by_user20.agg(tpc_of_users=('total_spent','sum'))
+        #TOTAL PROFIT OF STORE
+        profit=dataset[dataset.event_type == 'purchase'].groupby(dataset.event_type).agg(gain=('price','sum'))
+        #80% OF STORE'S TOTAL PROFIT
+        profit_80=(profit*80)/100
+        #PERCENTAGE CHANGE BETWEEN 80% OF PROFIT AND 20% OF USERS
+        percent=int((float( spent_by_20.total_spent)/float(profit_80.gain))*100)
+        print("%d%% of the profit for the month of %s comes from 20%% of the user's purchases"%(percent,months[i]))
+        if (percent >= 80):
+            print ("For the month of %s Pareto's principle is applied." %months[i])
+        else:
+            print ("For the month of %s Pareto's principle isn't applied." %months[i])
+    return
