@@ -285,6 +285,7 @@ def compute_average_time_removed_item(df_names, months):
                 pass
             else:
                 continue
+
             dist_prod = df_product.event_time[df_product.event_type == 'purchase'].values - df_product.event_time[df_product.event_type == 'cart'].values
 
             product_dict[prod] = []
@@ -296,11 +297,11 @@ def compute_average_time_removed_item(df_names, months):
 # RQ1.5 functions
 def compute_average_time_first_view(df_names, months):
     """
-    Compute the probability that products are bought once is added to the cart
+    Compute the average time an item stays in the cart between the first time view and purchase/addition to cart
     input:
     - list of names of csv files to open
     output:
-    - probability products are purchased once are added to the cart
+    - average time
     """   
     
     df_mean_database = pd.DataFrame(index=months, columns=['mean'])
@@ -311,18 +312,18 @@ def compute_average_time_first_view(df_names, months):
             parse_dates=['event_time'])
 
         # cut off the view variable from event_type
-        df_2 = df.copy()
-        
         df_3 = df[df['event_type'] != 'view']
 
         # init the dict where the key are the products and the values are the mean of each product
         product_dict = {}
         # loop through the event_type 'purchase' to find unique product_id
         for prod in df_3['product_id'].unique():
-            df_product = df_2[df_2['product_id'] == prod]
+            df_product = df[df['product_id'] == prod]
             
-            # 
-            if any(df_product['event_type'] == 'view') == False:
+            # check if at least a 'view' event exist             
+            if df_product['event_type'].str.contains('view').any():
+                pass
+            else:
                 continue
 
             # check if there are some 'purchase' event before the 'view' event (only for the first time of seeing the 'purchase')
@@ -339,10 +340,15 @@ def compute_average_time_first_view(df_names, months):
                 # drop any 'cart' events at the beginning
                 df_product = df_product.drop(labels=df_3[df_3['event_type'] == 'cart'].index)
 
-            # 
-            if any(df_product['event_type'] == 'purchase') == False:
+            # check if at least a 'purchase' event exist     
+            if df_product['event_type'].str.contains('purchase').any():
+                pass
+            else:
                 continue
-            elif any(df_product['event_type'] == 'cart') == False:
+            # check if at least a 'cart' event exist     
+            if df_product['event_type'].str.contains('cart').any():
+                pass
+            else:
                 continue
 
             product_dict[prod] = []
@@ -363,11 +369,11 @@ def compute_average_time_first_view(df_names, months):
 
 def compute_number_sold_per_category(df_names, months):
     """
-    Compute the probability that products are bought once is added to the cart
+    Compute the most sold product per category
     input:
     - list of names of csv files to open
     output:
-    - 
+    - number of sold product per category
     """    
     # init a dataframe with index as months and column as most sold product
     df_final = {}
@@ -389,9 +395,9 @@ def compute_number_sold_per_category(df_names, months):
 
 def plot_number_sold_per_category(df_final, months):
     """
-    plots the number of sold product per category per month
+    plot the number of sold product per category per month
     """
-    # plot average_session_df
+    # plot number of sold product per category pe moth using subplots
     fig, a = plt.subplots(4,2)
     # Plot 1
     df_final[0].reset_index().plot(kind='bar', y='product_id', x='category_1', ax=a[0][0])
@@ -447,7 +453,7 @@ def plot_number_sold_per_category(df_final, months):
 
 def plot_most_visited_subcategories(df_names, months):
     """
-    plots the most visited subcategories
+    plot the most visited subcategories
     """    
     # init a dataframe with index as months and column as most sold product
     df_final = {}
@@ -456,15 +462,18 @@ def plot_most_visited_subcategories(df_names, months):
         df = pd.read_csv(df_names[i],
             usecols=['event_type', 'category_code'])
 
+        # take only the view events
         df = df[df['event_type'] == 'view']
+        # split the categories into subcategories
         new = df['category_code'].str.split(".", expand=True)
         df['subcategory'] = new[1]
         df.drop(columns=['category_code'], inplace=True)
 
-
+        # group the subcategories and sort in descending order the relative values
         df_final[months[i]] = df.groupby(by=['subcategory']).count().sort_values('event_type', ascending=False)
-    
+    # build a pool of lists
     df_final = [df_final[months[i]] for i in range(len(df_final))]
+    # concat each list of month
     merged_df = pd.concat([df_final[i] for i in range(len(df_final))]).reset_index()
 
     df_tot = merged_df.groupby(by=['subcategory']).sum().sort_values('event_type', ascending=False).rename(columns={'event_type': 'view'}).reset_index()
@@ -485,11 +494,13 @@ def plot_most_visited_subcategories(df_names, months):
 
 def plot_10_most_sold(df_final, months):
     """
-    plots the 10 most sold product per category
+    plot the 10 most sold product per category
     """    
+    # concat the dataset
     merged_df = pd.concat([df_final[i] for i in range(len(df_final))]).reset_index()
+    # group together by category in descending order
     df_tot = merged_df.groupby(by=['category_1']).sum().sort_values('product_id', ascending=False).rename(columns={'event_type': 'view'})[:10]
-    return df_tot
+    return df_to
 
 
 # RQ3 functions
@@ -724,11 +735,12 @@ def conversion_rate(df_names,months):
         view_4_category=dataset[dataset.event_type=='view'].groupby('category_name').agg(view=('event_type','count'))
         #PLOT OF NUMBER OF PURCHASE FOR CATEGORY
         purc_4_category.plot.bar(figsize = (18, 7), title='Number of purchase of %s'%months[i])
+        plt.show()
         #CONVERSION RATE FOR CATEGORY
         cr_4_cat=(purc_4_category.purchase/view_4_category.view)
         dec=cr_4_cat.sort_values(axis=0, ascending=False)
         print ('Conversion rate of each category of %s'%months[i])
-        print(dec)
+        print(dec, end='\n')
     return
 
 #RQ7
