@@ -11,4 +11,9 @@ The repository contains the following files:
 
 1. `ADM-HW2-Group9.ipynb`:
 
-        > 
+        > It contains the python notebook with the runned cell and the relative outputs for each exercise.
+
+2. `functions.py`:
+
+        > It contains all the functions we used in the python notebook. Each functon is explained in detailed with commas.
+        
