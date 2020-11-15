@@ -9,6 +9,8 @@ import os
 import datetime
 import time
 
+from functools import reduce
+
 # Function that provide some information about the cvs files
 def infos(old_df_names, months):
     """
@@ -21,14 +23,14 @@ def infos(old_df_names, months):
     """
     for i in range(len(old_df_names)):
         
-        df = pd.read_csv(old_df_names[i])
+        df_10 = pd.read_csv(old_df_names[i])
 
         print('Month %s :' %months[i])
 
-        for i in df.columns:
+        for i in df_10.columns:
 
-            print('\t- ' + i + ' has number of Nan : %.d'  %int(df[i].isna().sum()))
-        print('Total number of rows: %.d' %len(df))
+            print('\t- {} has number of Nan : {:d} ({:.2f}%)'.format(i, int(df_10[i].isna().sum()), (int(df_10[i].isna().sum())/len(df_10))*100))
+        print('Total number of rows: {:d}'.format(len(df)))
         print('\n')
 
     return 
@@ -228,7 +230,7 @@ def compute_probability_cart_purchase(df_names, months):
     return prob
 
 # RQ1.4 functions
-def compute_average_time_removed_item(df_names):
+def compute_average_time_removed_item(df_names, months):
     """
     Compute the average time an item stays in the cart before being removed
     input:
@@ -264,10 +266,28 @@ def compute_average_time_removed_item(df_names):
                 df_3 = df_product[df_product.event_time <= df_product[df_product['event_type'] == 'cart'].event_time.reset_index(drop=True)[0]]
                 # drop any 'cart' events at the beginning
                 df_product = df_product.drop(labels=df_3[df_3['event_type'] == 'purchase'].index)
-
             
+            # check if there are some 'cart' event before the 'purchase' event (only for the last time of seeing the 'cart')
+            if any(df_product[df_product['event_type'] == 'cart'].event_time >= 
+                    df_product[df_product['event_type'] == 'purchase'].event_time.reset_index(drop=True)[len(df_product[df_product['event_type'] == 'purchase'])-1]) == True:
+                df_3 = df_product[df_product.event_time >= df_product[df_product['event_type'] == 'purchase'].event_time.reset_index(drop=True)[len(df_product[df_product['event_type'] == 'purchase'])-1]]
+                # drop any 'cart' events at the beginning
+                df_product = df_product.drop(labels=df_3[df_3['event_type'] == 'cart'].index)
+
+
+            # check if at least a 'cart' event exist             
+            if df_product['event_type'].str.contains('cart').any():
+                pass
+            else:
+                continue
+            # check if at least a 'purchase' event exist             
+            if df_product['event_type'].str.contains('purchase').any():
+                pass
+            else:
+                continue
             dist_prod = df_product.event_time[df_product.event_type == 'purchase'].values - df_product.event_time[df_product.event_type == 'cart'].values
 
+            product_dict[prod] = []
             product_dict[prod].append(np.mean(dist_prod))
 
         # add final average per month
@@ -354,7 +374,7 @@ def compute_number_sold_per_category(df_names, months):
     for i in range(len(df_names)):
         # load the ith dataframe, taking only the 
         df = pd.read_csv(df_names[i],
-            usecols=['product_id', 'category_code', 'event_type'], nrows=1000000)
+            usecols=['product_id', 'category_code', 'event_type'])
 
         df = df[df['event_type'] == 'purchase']
         new = df['category_code'].str.split(".", expand=True)
@@ -421,7 +441,7 @@ def plot_number_sold_per_category(df_final, months):
     fig.suptitle('Category of the most trending products overall', fontsize=14, fontweight='bold')
 
     fig.set_figwidth(20)
-    fig.set_figheight(5)
+    fig.set_figheight(20)
     plt.show()
     return
 
@@ -434,7 +454,7 @@ def plot_most_visited_subcategories(df_names, months):
     for i in range(len(df_names)):
         # load the ith dataframe, taking only the 
         df = pd.read_csv(df_names[i],
-            usecols=['event_type', 'category_code'], nrows=100000)
+            usecols=['event_type', 'category_code'])
 
         df = df[df['event_type'] == 'view']
         new = df['category_code'].str.split(".", expand=True)
@@ -641,7 +661,7 @@ def plot_hour_avg(df_names,months):
     -plot
     '''
     for i in range(len(df_names)):
-        df=pd.read_csv(df_names[i],parse_dates=['event_time'],date_parser=pd.to_datetime,usecols=['event_time','user_id'])
+        df=pd.read_csv(df_names[i],parse_dates=['event_time'],usecols=['event_time','user_id'])
         #hourly averege of visitors for each day
         domenica=df[df.event_time.dt.dayofweek==0].groupby(df.event_time.dt.hour).user_id.count()
         lunedi=df[df.event_time.dt.dayofweek==1].groupby(df.event_time.dt.hour).user_id.count()
@@ -663,7 +683,7 @@ def plot_hour_avg(df_names,months):
         plt.ylabel('VISITORS')
         plt.title("Daily average - %s " %months[i])
         plt.xticks(range(0,24))
-        plt.legend('upper-left')
+        plt.legend()
         plt.show()
     return
     
@@ -694,17 +714,10 @@ def conversion_rate(df_names,months):
         cr=totpurc/totview
         print ('Overall conversion rate of %s'%months[i])
         print (cr)
-        #CREATE A LIST THAT CONTAINS CATEGORY NAME
-        c=dataset.index
-        categorie=[]
-        for j in c :
-            categorie.append((dataset.category_code[j].split('.')[0]))
-        #CONVERT LIST IN SERIES
-        x=pd.Series(categorie)
-        #DELETE FROM DATASET CATEGORY_CODE
-        del dataset['category_code']
-        #INSERT IN DATASET CATEGORY_NAME
-        dataset.insert(0,'category_name',x)
+        #CREATE A NEW COLUMN WITH THE SPLITTED CATEGORY NAME
+        new = dataset['category_code'].str.split(".", expand=True)
+        dataset['category_name'] = new[0]
+        dataset.drop(columns=['category_code'], inplace=True)
         #NUMBER OF PURCHASE FOR CATEGORY
         purc_4_category=dataset[dataset.event_type=='purchase'].groupby('category_name').agg(purchase=('event_type','count'))
         #NUMBER OF VIEW FOR CATEGORY
@@ -738,7 +751,7 @@ def pareto(df_names,months):
         user_20=int(len(purchase_by_user)*20/100)
         purch_by_user20=purchase_by_user[:user_20]
         #TOTAL SPENT BY 20% OF USERS
-        spent_by_20=purch_by_user20.agg(tpc_of_users=('total_spent','sum'))
+        spent_by_20=purch_by_user20.agg('sum')
         #TOTAL PROFIT OF STORE
         profit=dataset[dataset.event_type == 'purchase'].groupby(dataset.event_type).agg(gain=('price','sum'))
         #80% OF STORE'S TOTAL PROFIT
