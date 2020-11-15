@@ -407,7 +407,7 @@ def plot_average_price_per_category(category, df_names):
     final2 = final.groupby(['category_code', 'brand']).mean().reset_index()
     # Selecting the category_code we want to analyze
     fplot = final2.loc[final2['category_code'] == category]
-    # Setting the y axis for the plot
+    # Setting the values to show in the plot at the end of the bars 
     y = list(fplot['price'])
     # Assigning a variable to the plot
     end = fplot.plot(x='brand', kind='barh', figsize=(20, 60))
