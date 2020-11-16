@@ -23,13 +23,13 @@ def infos(old_df_names, months):
     """
     for i in range(len(old_df_names)):
         
-        df_10 = pd.read_csv(old_df_names[i])
+        df = pd.read_csv(old_df_names[i])
 
         print('Month %s :' %months[i])
 
-        for i in df_10.columns:
+        for i in df.columns:
 
-            print('\t- {} has number of Nan : {:d} ({:.2f}%)'.format(i, int(df_10[i].isna().sum()), (int(df_10[i].isna().sum())/len(df_10))*100))
+            print('\t- {} has number of Nan : {:d} ({:.2f}%)'.format(i, int(df[i].isna().sum()), (int(df[i].isna().sum())/len(df))*100))
         print('Total number of rows: {:d}'.format(len(df)))
         print('\n')
 
@@ -447,7 +447,7 @@ def plot_number_sold_per_category(df_final, months):
     fig.suptitle('Category of the most trending products overall', fontsize=14, fontweight='bold')
 
     fig.set_figwidth(20)
-    fig.set_figheight(20)
+    fig.set_figheight(50)
     plt.show()
     return
 
@@ -500,7 +500,7 @@ def plot_10_most_sold(df_final, months):
     merged_df = pd.concat([df_final[i] for i in range(len(df_final))]).reset_index()
     # group together by category in descending order
     df_tot = merged_df.groupby(by=['category_1']).sum().sort_values('product_id', ascending=False).rename(columns={'event_type': 'view'})[:10]
-    return df_to
+    return df_tot
 
 
 # RQ3 functions
@@ -734,6 +734,7 @@ def conversion_rate(df_names,months):
         #NUMBER OF VIEW FOR CATEGORY
         view_4_category=dataset[dataset.event_type=='view'].groupby('category_name').agg(view=('event_type','count'))
         #PLOT OF NUMBER OF PURCHASE FOR CATEGORY
+        fig = plt.figure()
         purc_4_category.plot.bar(figsize = (18, 7), title='Number of purchase of %s'%months[i])
         plt.show()
         #CONVERSION RATE FOR CATEGORY
